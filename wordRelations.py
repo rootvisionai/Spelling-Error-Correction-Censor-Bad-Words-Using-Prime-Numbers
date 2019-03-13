@@ -8,19 +8,21 @@ Created on Mon Mar 11 21:02:45 2019
 import numpy as np
 directoryOfElement = r'C:/Users/evrozm/Desktop/'
 
-with open("{}primeNumbers.txt".format(directoryOfElement), "r") as txtfile:
-    txtString = txtfile.read()
-    txtfile.close()
-
-txtSplitString1 = txtString.split()
-
-primeNumbers = np.asarray(txtSplitString1).astype(int)
-
-primeNumbers = sorted(primeNumbers)
-
-letters = np.array(["a","b","c","d","e","f","g","h","i","j","k","l","m","n","o","p","q","r","s","t","u","v","w","x","y","z"])
-
-myDict = {letters[cnt]:primeNumbers[cnt] for cnt in range(len(letters))}
+def letterPrimeNumberDict(directoryOfElement):
+    with open("{}primeNumbers.txt".format(directoryOfElement), "r") as txtfile:
+        txtString = txtfile.read()
+        txtfile.close()
+    
+    txtSplitString1 = txtString.split()
+    
+    primeNumbers = np.asarray(txtSplitString1).astype(int)
+    
+    primeNumbers = sorted(primeNumbers)
+    
+    letters = np.array([" ","a","b","c","d","e","f","g","h","i","j","k","l","m","n","o","p","q","r","s","t","u","v","w","x","y","z"])
+    
+    myDict = {letters[cnt]:primeNumbers[cnt] for cnt in range(len(letters))}
+    return myDict,primeNumbers
 
 def word2Prime(word1,myDict):
     base1 = np.int64(1)
@@ -33,7 +35,7 @@ def word2Prime(word1,myDict):
         elif cnt == len(word1)-1:
             baseList.append(myDict[letter])
         else:
-            #print(letter,myDict[letter])
+            #print(word1,myDict,"\n")
             base1 = base1*myDict[letter]
         cnt = cnt+1
     baseList.append(base1)
@@ -79,6 +81,113 @@ def measureSimilary(word1,word2,pnl):
     mv = mv+((len(foundFacts)+0.01)/(len(fact1)+0.01))*0.50
     #print("3",mv)
     return mv
+
+def purifyText(text):
+    for elm in text:
+        if ord(elm)>122 and ord(elm)<128:
+            text = text.replace(elm," ")
+        elif ord(elm)>32 and ord(elm)<65:
+            text = text.replace(elm," ")
+        elif ord(elm)>90 and ord(elm)<97:
+            text = text.replace(elm," ")
+        else:
+            pass
+    return text
+
+def spellingErrorCorrection(directoryOfElement, text1, dictionaryText):
+    text1 = purifyText(text1)
+    text2 = purifyText(dictionaryText)
+    """text1 = text1.replace(",","")
+    text2 = text2.replace(",","")
+    text1 = text1.replace(".","")
+    text2 = text2.replace(".","")"""
+    
+    text1S = text1.split()
+    text2S = text2.split()
+    myDict,primeNumbers = letterPrimeNumberDict(directoryOfElement)
+    pnl = primeNumbers[0:len(myDict)]
+    correctionList = []
+    for elm1 in text1S:
+        correctionList.append([])
+        for elm2 in text2S:
+            #print(elm1, elm2)
+            if len(elm1)>3 and len(elm2)>3:
+                elm1L = all2lowercase(elm1)
+                elm1Prime = word2Prime(elm1L,myDict)
+                elm2L = all2lowercase(elm2)
+                elm2Prime = word2Prime(elm2L,myDict)
+                mv = measureSimilary(elm1Prime,elm2Prime,pnl)
+                #if mv>0.5:
+                #   print("The word -{}- and -{}- are alike with value {}.".format(elm1,elm2,mv))
+                correctionList[-1].append([elm1,elm2,mv])
+    
+    for cnt in range(len(correctionList)):
+        correctionList[cnt] = sorted(correctionList[cnt],key=lambda column:column[2], reverse=True)
+        
+    for cnt in range(len(correctionList)):
+        if len(correctionList[cnt])>0:
+            text1 = text1.replace(correctionList[cnt][0][0],correctionList[cnt][0][1])
+    return text1
+   
+def cencorBadWords(directoryOfElement, blackText, similarity):
+    with open("{}blacklistTurkish.txt".format(directoryOfElement), "r") as blackFile:
+        blackString = blackFile.read()
+        blackFile.close()
+    
+    myDict,primeNumbers = letterPrimeNumberDict(directoryOfElement)
+    
+    import unidecode
+    blackString = unidecode.unidecode(blackString)
+    blackString = blackString.replace(",","")
+    blackString = blackString.replace(".","")
+    blackString = blackString.replace("1","i")
+    blackList = blackString.split()
+    
+    
+    blackText = unidecode.unidecode(blackText)
+    text1 = blackText
+    for elm in blackText:
+        if ord(elm)>122 and ord(elm)<128:
+            blackText = blackText.replace(elm," ")
+        elif ord(elm)>32 and ord(elm)<65:
+            blackText = blackText.replace(elm," ")
+        elif ord(elm)>90 and ord(elm)<97:
+            blackText = blackText.replace(elm," ")
+        else:
+            pass
+        
+    print(blackText)
+    blackText = blackText.replace(",","")
+    blackText = blackText.replace(".","")
+    testWords = blackText.split()
+    text1S = testWords
+    text2S = blackList
+    
+    pnl = primeNumbers[0:len(myDict)]
+    correctionList = []
+    for elm1 in text1S:
+        correctionList.append([])
+        for elm2 in text2S:
+            #print(elm1, elm2)
+            if len(elm1)>3 and len(elm2)>3:
+                elm1L = all2lowercase(elm1)
+                elm1Prime = word2Prime(elm1L,myDict)
+                elm2L = all2lowercase(elm2)
+                elm2Prime = word2Prime(elm2L,myDict)
+                mv = measureSimilary(elm1Prime,elm2Prime,pnl)
+                #if mv>0.75:
+                #   print("The word -{}- and -{}- are alike with value {}.".format(elm1,elm2,mv))
+                correctionList[-1].append([elm1,elm2,mv])
+    
+    for cnt in range(len(correctionList)):
+        correctionList[cnt] = sorted(correctionList[cnt],key=lambda column:column[2], reverse=True)
+        
+    for cnt in range(len(correctionList)):
+        if len(correctionList[cnt])>0:
+            if correctionList[cnt][0][2]>similarity:
+                text1 = text1.replace(correctionList[cnt][0][0],"****")
+    return text1
+###
 """
 word1 = "wrod"
 word2 = "place"
@@ -94,38 +203,13 @@ pnl = primeNumbers[0:26]
 print("word1:",word1,", word2:",word2,"\n","Matching Result:",measureSimilary(baseList[0],baseList[1],pnl))
 print("word2:",word2,", word3:",word3,"\n","Matching Result:",measureSimilary(baseList[1],baseList[2],pnl))
 print("word1:",word1,", word3:",word3,"\n","Matching Result:",measureSimilary(baseList[0],baseList[2],pnl))"""
+###
+
+
+            
+blackText = "KArdeşim senin ben ananın +%&/ am!nı yolunu sikyim."
+cencoredBlackText = cencorBadWords(directoryOfElement, blackText, 0.8)
 
 text1 = "Aoccdrnig to a rscheearch and at Cmabrigde Uinervtisy, it deos not mttaer in waht oredr the ltteers in a wrod are, the olny iprmoetnt tihng is taht the frist and lsat ltteer be at the rghit pclae. The rset can be a toatl mses and you can sitll raed it wouthit porbelm. Tihs is bcuseae the huamn mnid deos not raed ervey lteter by istlef, but the wrod as a wlohe."
-text2 = "According to a researcher at Cambridge University, it does not matter in what order the letters in a word are, the only important thing is that the first and last letter be at the right place. The rest can be a total mess and you can still read it without problem. This is because the human mind does not read every letter by itself but the word as a whole."
-text3 = "Aoccdrnig to a rscheearch and at Cmabrigde Uinervtisy, it deos not mttaer in waht oredr the ltteers in a wrod are, the olny iprmoetnt tihng is taht the frist and lsat ltteer be at the rghit pclae. The rset can be a toatl mses and you can sitll raed it wouthit porbelm. Tihs is bcuseae the huamn mnid deos not raed ervey lteter by istlef, but the wrod as a wlohe."
-
-text1 = text1.replace(",","")
-text2 = text2.replace(",","")
-text1 = text1.replace(".","")
-text2 = text2.replace(".","")
-
-text1S = text1.split()
-text2S = text2.split()
-
-pnl = primeNumbers[0:26]
-correctionList = []
-for elm1 in text1S:
-    correctionList.append([])
-    for elm2 in text2S:
-        #print(elm1, elm2)
-        if len(elm1)>3 and len(elm2)>3:
-            elm1L = all2lowercase(elm1)
-            elm1Prime = word2Prime(elm1L,myDict)
-            elm2L = all2lowercase(elm2)
-            elm2Prime = word2Prime(elm2L,myDict)
-            mv = measureSimilary(elm1Prime,elm2Prime,pnl)
-            if mv>0.5:
-                print("The word -{}- and -{}- are alike with value {}.".format(elm1,elm2,mv))
-            correctionList[-1].append([elm1,elm2,mv])
-
-for cnt in range(len(correctionList)):
-    correctionList[cnt] = sorted(correctionList[cnt],key=lambda column:column[2], reverse=True)
-    
-for cnt in range(len(correctionList)):
-    if len(correctionList[cnt])>0:
-        text1 = text1.replace(correctionList[cnt][0][0],correctionList[cnt][0][1])
+dictionaryText = "According to a researcher at Cambridge University, it does not matter in what order the letters in a word are, the only important thing is that the first and last letter be at the right place. The rest can be a total mess and you can still read it without problem. This is because the human mind does not read every letter by itself but the word as a whole."
+correctedText = spellingErrorCorrection(directoryOfElement, text1, dictionaryText)
